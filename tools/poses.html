@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!-- 開発用: キメポーズ一覧の確認ページ (http://localhost:8123/tools/poses.html) -->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>poses debug</title>
+<style>body{margin:0;background:#202636}</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { PlayerModel, heroPoses } from '../js/actors.js';
+import { makeSuitSkin } from '../js/skin.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x232a3e);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
+
+scene.add(new THREE.HemisphereLight(0xbbccff, 0x334455, 0.8));
+const key = new THREE.DirectionalLight(0xffffff, 2);
+key.position.set(4, 8, 6);
+scene.add(key);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 20), new THREE.MeshStandardMaterial({ color: 0x2a3147 }));
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+const colors = ['#ff3b30', '#2e8bff', '#ffcc00', '#2ecc71', '#ff5fa2', '#b8c0d4', '#ff8c1a', '#b06bff', '#27d6e8', '#a8e832'];
+const N = heroPoses.length;
+const players = [];
+for (let i = 0; i < N; i++) {
+  const p = new PlayerModel(makeSuitSkin(colors[i % colors.length]));
+  p.position.set((i - (N - 1) / 2) * 1.7, 0, 0);
+  scene.add(p);
+  players.push(p);
+}
+camera.position.set(0, 2.6, 11.5);
+camera.lookAt(0, 1, 0);
+
+let t = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  t += 1 / 60;
+  players.forEach((p, i) => heroPoses[i](p, t));
+  renderer.render(scene, camera);
+}
+loop();
+</script>
+</body>
+</html>

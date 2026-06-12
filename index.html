@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCRangers - マイクラ戦隊メーカー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Reggae+One&family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="stage-container"></div>
+  <canvas id="fx2d"></canvas>
+  <div id="vignette"></div>
+  <div id="letterbox"><div class="bar top"></div><div class="bar bottom"></div></div>
+  <div id="titles"></div>
+
+  <!-- 演出中HUD -->
+  <div id="hud" class="hidden">
+    <div id="hud-progress"></div>
+    <div id="hud-buttons">
+      <button id="btn-mute" class="hud-btn" title="サウンド ON/OFF">&#x1F50A;</button>
+      <button id="btn-exit" class="hud-btn" title="編集に戻る">&#x2715;</button>
+    </div>
+    <div id="hud-skip">クリック / Space で次へ &nbsp;|&nbsp; Esc で戻る</div>
+  </div>
+
+  <!-- 入力フォーム -->
+  <div id="form-screen">
+    <div id="form-panel">
+      <h1 class="logo">MC<span>RANGERS</span></h1>
+      <p class="tagline">マインクラフト戦隊 登場演出メーカー</p>
+
+      <section class="form-section">
+        <h2><span class="sec-num">01</span> 戦隊情報</h2>
+        <div class="field-row">
+          <label>戦隊名</label>
+          <input type="text" id="squad-name" placeholder="未入力なら「{1人目}と愉快な仲間たち」" maxlength="24">
+        </div>
+        <div class="field-row">
+          <label>二つ名 <small>(オプション)</small></label>
+          <input type="text" id="squad-title" placeholder="例: 地底を駆ける七色の閃光" maxlength="32">
+        </div>
+        <div class="field-row">
+          <label>チーム紹介演出</label>
+          <select id="squad-scene"></select>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2><span class="sec-num">02</span> メンバー <small id="member-count"></small></h2>
+        <div id="member-list"></div>
+        <div class="member-actions">
+          <button id="btn-add-member" class="btn sub">＋ メンバー追加</button>
+          <button id="btn-sample" class="btn sub ghost">サンプル(5人)</button>
+          <button id="btn-sample16" class="btn sub ghost">サンプル(16人)</button>
+        </div>
+      </section>
+
+      <div id="form-error" class="hidden"></div>
+
+      <div class="form-footer">
+        <button id="btn-play" class="btn primary">&#9654; 出撃！</button>
+      </div>
+      <p class="hint">スキンは Minecraft Java版 の Username から自動取得します（UUID直接入力も可）。<br>取得できない場合は戦隊スーツのスキンで登場します。</p>
+    </div>
+  </div>
+
+  <!-- ローディング / スタート / エンドカード -->
+  <div id="overlay-screen" class="hidden">
+    <div id="overlay-inner"></div>
+  </div>
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
