@@ -46,9 +46,9 @@ export const ENVS = {
     hemi: 0.5, key: 2.0, keyC: 0xffb060, rim: 1.6, rimC: 0xff5fa2,
   },
   dark: {
-    top: 0x020308, horizon: 0x0a0d1a, bottom: 0x05060c,
-    fog: 0x05060e, fogD: 0.02, ground: 0x0a0c16, grid: 0x223366, gridVis: false,
-    hemi: 0.12, key: 0.25, keyC: 0xaac4ff, rim: 1.8, rimC: 0x4d7dff,
+    top: 0x05060f, horizon: 0x141a30, bottom: 0x0a0c16,
+    fog: 0x0a0d18, fogD: 0.018, ground: 0x141826, grid: 0x2a4080, gridVis: false,
+    hemi: 0.32, key: 0.95, keyC: 0xaac4ff, rim: 1.6, rimC: 0x4d7dff,
   },
   day: {
     top: 0x2569c9, horizon: 0xbfe0ff, bottom: 0x44663f,
