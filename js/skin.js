@@ -142,12 +142,8 @@ async function fromMineatar(uuid) {
   return { canvas, slim: detectSlim(canvas) };
 }
 
-// 取得失敗・未入力時: 戦隊スーツスキンを生成
-export function makeSuitSkin(colorCss) {
-  const cv = document.createElement('canvas');
-  cv.width = 64; cv.height = 64;
-  const g = cv.getContext('2d', { willReadFrequently: true });
-
+// スーツの胴体・腕・脚をcanvasに描く(頭は対象外)
+function drawSuitBody(g, colorCss) {
   const base = colorCss;
   const dark = shade(colorCss, -0.35);
   const darker = shade(colorCss, -0.55);
@@ -162,15 +158,6 @@ export function makeSuitSkin(colorCss) {
     g.fillStyle = colors.left;   g.fillRect(u + d + w, v + d, d, h);
     g.fillStyle = colors.back;   g.fillRect(u + d + w + d, v + d, w, h);
   };
-
-  // 頭: ヘルメット + 黒バイザー
-  box(0, 0, 8, 8, 8, { top: lite, bottom: darker, right: dark, front: base, left: dark, back: dark });
-  g.fillStyle = '#14161f';
-  g.fillRect(9, 10, 6, 3);          // バイザー(前面)
-  g.fillStyle = '#3b4a6b';
-  g.fillRect(10, 11, 4, 1);         // バイザー反射
-  g.fillStyle = '#c8ccda';
-  g.fillRect(11, 14, 2, 1);         // マウスプレート
 
   // 胴体: スーツ + 白ベルト + 胸のV
   box(16, 16, 8, 12, 4, { top: dark, bottom: darker, right: dark, front: base, left: dark, back: dark });
@@ -197,7 +184,42 @@ export function makeSuitSkin(colorCss) {
   g.fillRect(0, 29, 16, 3);         // 右ブーツ
   g.fillRect(16, 61, 16, 3);        // 左ブーツ
 
+  return { base, dark, darker, lite, box };
+}
+
+// 取得失敗・未入力時: 戦隊スーツスキンを生成(ヘルメット付きフルスーツ)
+export function makeSuitSkin(colorCss) {
+  const cv = document.createElement('canvas');
+  cv.width = 64; cv.height = 64;
+  const g = cv.getContext('2d', { willReadFrequently: true });
+
+  const { base, dark, darker, lite, box } = drawSuitBody(g, colorCss);
+
+  // 頭: ヘルメット + 黒バイザー
+  box(0, 0, 8, 8, 8, { top: lite, bottom: darker, right: dark, front: base, left: dark, back: dark });
+  g.fillStyle = '#14161f';
+  g.fillRect(9, 10, 6, 3);          // バイザー(前面)
+  g.fillStyle = '#3b4a6b';
+  g.fillRect(10, 11, 4, 1);         // バイザー反射
+  g.fillStyle = '#c8ccda';
+  g.fillRect(11, 14, 2, 1);         // マウスプレート
+
   return { canvas: cv, slim: false, fallback: true };
+}
+
+// スーツ統一モード用: 体はメンバーカラーのスーツ、頭(顔)は本人のスキンのまま
+export function makeSuitedSkin(baseSkin, colorCss) {
+  const cv = document.createElement('canvas');
+  cv.width = 64; cv.height = 64;
+  const g = cv.getContext('2d', { willReadFrequently: true });
+
+  drawSuitBody(g, colorCss);
+  // 頭+帽子レイヤー(上段16px)だけ本人のスキンから移植
+  g.clearRect(0, 0, 64, 16);
+  g.drawImage(baseSkin.canvas, 0, 0, 64, 16, 0, 0, 64, 16);
+
+  // スーツは腕4px(classic)で描いているのでモデルもclassicで表示する
+  return { canvas: cv, slim: false };
 }
 
 function shade(hex, amt) {

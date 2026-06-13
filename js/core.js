@@ -162,7 +162,7 @@ export const RANDOM = 'random';
 
 export function defaultState() {
   return {
-    squad: { name: '', title: '', scene: RANDOM },
+    squad: { name: '', title: '', scene: RANDOM, suit: false },
     members: [emptyMember()],
   };
 }
@@ -211,6 +211,7 @@ export function normalizeState(s) {
       name: (s.squad.name || '').trim() || `${first}と愉快な仲間たち`,
       title: (s.squad.title || '').trim(),
       scene: s.squad.scene || RANDOM,
+      suit: !!s.squad.suit,
     },
     members,
   };
@@ -257,6 +258,7 @@ export function encodeState(state) {
     n: state.squad.name,
     t: state.squad.title,
     s: state.squad.scene,
+    u: state.squad.suit ? 1 : 0,
     m: state.members.map(m => [m.name, m.title, m.mc, m.scene, m.color || AUTO_COLOR]),
   };
   return b64urlEncode(JSON.stringify(compact));
@@ -267,7 +269,7 @@ export function decodeState(param) {
     const c = JSON.parse(b64urlDecode(param));
     if (!c || !Array.isArray(c.m)) return null;
     return {
-      squad: { name: c.n || '', title: c.t || '', scene: c.s || RANDOM },
+      squad: { name: c.n || '', title: c.t || '', scene: c.s || RANDOM, suit: !!c.u },
       members: c.m.slice(0, MAX_MEMBERS).map(a => ({
         name: a[0] || '', title: a[1] || '', mc: a[2] || '', scene: a[3] || RANDOM,
         color: sanitizeColor(a[4]),

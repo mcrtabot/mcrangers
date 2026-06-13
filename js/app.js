@@ -5,7 +5,7 @@ import { PlayerModel } from './actors.js';
 import { AUTO_COLOR, INTRO_SCENES, MAX_MEMBERS, RANDOM, RANGER_COLORS, SAMPLE_STATE, SAMPLE_STATE_16, TEAM_SCENES, decodeState, defaultState, emptyMember, memberColor, normalizeState, resolveScenes, shareURL } from './core.js';
 import { FX, ScreenFX, Stage, Titles, sfx } from './engine.js';
 import { createIntroScene } from './scenes.js';
-import { loadSkin } from './skin.js';
+import { loadSkin, makeSuitedSkin } from './skin.js';
 import { createTeamScene } from './team.js';
 
 // ============================================================
@@ -24,6 +24,7 @@ export class FormUI {
     this.squadName = document.getElementById('squad-name');
     this.squadTitle = document.getElementById('squad-title');
     this.squadScene = document.getElementById('squad-scene');
+    this.squadSuit = document.getElementById('squad-suit');
     this.errEl = document.getElementById('form-error');
     this.countEl = document.getElementById('member-count');
 
@@ -59,6 +60,9 @@ export class FormUI {
     this.squadName.addEventListener('input', () => { this.state.squad.name = this.squadName.value; this._saveDraft(); });
     this.squadTitle.addEventListener('input', () => { this.state.squad.title = this.squadTitle.value; this._saveDraft(); });
     this.squadScene.addEventListener('change', () => { this.state.squad.scene = this.squadScene.value; this._saveDraft(); });
+    if (this.squadSuit) {
+      this.squadSuit.addEventListener('change', () => { this.state.squad.suit = this.squadSuit.checked; this._saveDraft(); });
+    }
 
     this.render();
   }
@@ -72,6 +76,7 @@ export class FormUI {
     this.squadName.value = this.state.squad.name || '';
     this.squadTitle.value = this.state.squad.title || '';
     this.squadScene.value = this.state.squad.scene || RANDOM;
+    if (this.squadSuit) this.squadSuit.checked = !!this.state.squad.suit;
     this.renderMembers();
   }
 
@@ -441,6 +446,10 @@ async function startShow(state) {
   await Promise.all(state.members.map(async (m, i) => {
     const color = memberColor(m, i).css;
     results[i] = await loadSkin(m.mc, color);
+    // スーツ統一モード: 体をメンバーカラーのスーツに差し替え(顔は本人のまま)
+    if (state.squad.suit && !results[i].fallback) {
+      results[i] = makeSuitedSkin(results[i], color);
+    }
     done++;
     updateLoading(done, state.members.length);
   }));
