@@ -103,6 +103,7 @@ export class FormUI {
       </div>
       <div class="field-row"><label>メンバー名</label><input type="text" data-k="name" maxlength="20" placeholder="例: マイクレッド"></div>
       <div class="field-row"><label>二つ名 <small>(オプション)</small></label><input type="text" data-k="title" maxlength="30" placeholder="例: 灼熱の切り込み隊長"></div>
+      <div class="field-row"><label>決め台詞 <small>(オプション)</small></label><input type="text" data-k="quote" maxlength="40" placeholder="例: 燃えるぜ、一番槍はもらった!"></div>
       <div class="field-row"><label>MC Username</label><input type="text" data-k="mc" maxlength="40" placeholder="Java版ユーザー名 or UUID" spellcheck="false"></div>
       <div class="field-row color-row"><label>戦隊カラー</label>
         <span class="color-chip" style="--c:${color.css}"></span>
@@ -319,12 +320,14 @@ export class Director {
       this.ctx.stage.scene.add(p);
       this.scene = createIntroScene(m.sceneResolved, this.ctx, m, p, this.colors[this.idx]);
       this.afterglow = 0;
+      this.currentPlayer = p;
       this.onProgress({ type: 'member', index: this.idx, total: n, member: m });
     } else if (this.idx === n) {
       // チーム紹介: 決めポーズの後に余韻を残す
       this.players.forEach(p => this.ctx.stage.scene.add(p));
       this.scene = createTeamScene(this.state.squad.sceneResolved, this.ctx, this.state, this.players, this.colors);
       this.afterglow = 2.2;
+      this.currentPlayer = null;
       this.onProgress({ type: 'team', squad: this.state.squad });
     } else {
       this.scene = null;
@@ -351,11 +354,29 @@ export class Director {
   update(dt) {
     if (!this.running || !this.scene) return;
     this.t += dt;
-    if (this.t >= this.scene.duration + (this.afterglow || 0)) {
+    // シーン時間はshellが返す(決め台詞ホールド中はスロー再生で実時間より遅れる)
+    const sceneTime = this.scene.frame(this.t, dt);
+    this._trackBubble();
+    const end = (typeof sceneTime === 'number' ? sceneTime : this.t);
+    if (end >= this.scene.duration + (this.afterglow || 0)) {
       this.next();
-      return;
     }
-    this.scene.frame(this.t, dt);
+  }
+
+  // 決め台詞の吹き出しをキャラの頭上スクリーン座標へ追従させる
+  _trackBubble() {
+    const titles = this.ctx.titles;
+    if (!titles.bubbleEl || !this.currentPlayer) return;
+    const head = this.currentPlayer.head;
+    const v = new THREE.Vector3();
+    head.getWorldPosition(v);
+    v.y += 0.55;
+    v.project(this.ctx.stage.camera);
+    if (v.z > 1) { titles.bubbleEl.style.display = 'none'; return; }
+    titles.bubbleEl.style.display = '';
+    const x = (v.x * 0.5 + 0.5) * innerWidth;
+    const y = (-v.y * 0.5 + 0.5) * innerHeight;
+    titles.moveBubble(x, y, x > innerWidth * 0.62);
   }
 }
 

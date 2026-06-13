@@ -1479,6 +1479,50 @@ const VARIANTS = ['v-slam', 'v-slide', 'v-rise'];
 export class Titles {
   constructor(el) {
     this.el = el;
+    this.bubbleEl = null;
+  }
+
+  // 決め台詞のコミック風吹き出し(位置はmoveBubbleで毎フレーム更新)
+  bubble(text) {
+    this.clearBubble();
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    // しっぽはclip-pathの外に置く(本体のクリップで切られないようコンテナ直下)
+    b.innerHTML =
+      `<div class="bubble-body"><div class="bubble-in">${esc(text)}</div></div>` +
+      `<svg class="bubble-tail" width="38" height="30" viewBox="0 0 38 30" shape-rendering="crispEdges">` +
+      `<path d="M4 0 H34 V6 H24 V14 H14 V22 H4 Z" fill="#1a1a1a"/>` +
+      `<path d="M8 0 H30 V2 H20 V10 H10 V16 H8 Z" fill="#ffffff"/>` +
+      `</svg>`;
+    document.getElementById('app').appendChild(b);
+    this.bubbleEl = b;
+    return b;
+  }
+
+  // 頭上スクリーン座標(x,y)に吹き出しを配置。flip=trueで左右反転
+  moveBubble(x, y, flip) {
+    if (!this.bubbleEl) return;
+    const b = this.bubbleEl;
+    b.classList.toggle('flip', !!flip);
+    const w = b.offsetWidth, h = b.offsetHeight;
+    let left = flip ? x - w + 24 : x - 24;
+    let top = y - h - 34;
+    left = Math.max(8, Math.min(innerWidth - w - 8, left));
+    top = Math.max(8, top);
+    b.style.left = left + 'px';
+    b.style.top = top + 'px';
+  }
+
+  clearBubble(animated = false) {
+    if (!this.bubbleEl) return;
+    const b = this.bubbleEl;
+    this.bubbleEl = null;
+    if (animated) {
+      b.classList.add('out');
+      setTimeout(() => b.remove(), 200);
+    } else {
+      b.remove();
+    }
   }
 
   _mk(cls, html, color) {
@@ -1521,6 +1565,7 @@ export class Titles {
   }
 
   clear(immediate = true) {
+    this.clearBubble(!immediate);
     if (immediate) {
       this.el.innerHTML = '';
       this.el.classList.remove('center');

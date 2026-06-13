@@ -168,7 +168,7 @@ export function defaultState() {
 }
 
 export function emptyMember() {
-  return { name: '', title: '', mc: '', scene: RANDOM, color: AUTO_COLOR };
+  return { name: '', title: '', mc: '', scene: RANDOM, color: AUTO_COLOR, quote: '' };
 }
 
 export const AUTO_COLOR = 'auto';
@@ -204,6 +204,7 @@ export function normalizeState(s) {
       mc: (m.mc || '').trim(),
       scene: m.scene || RANDOM,
       color: sanitizeColor(m.color),
+      quote: (m.quote || '').trim(),
     }));
   const first = members[0] ? members[0].name : '';
   return {
@@ -259,7 +260,7 @@ export function encodeState(state) {
     t: state.squad.title,
     s: state.squad.scene,
     u: state.squad.suit ? 1 : 0,
-    m: state.members.map(m => [m.name, m.title, m.mc, m.scene, m.color || AUTO_COLOR]),
+    m: state.members.map(m => [m.name, m.title, m.mc, m.scene, m.color || AUTO_COLOR, m.quote || '']),
   };
   return b64urlEncode(JSON.stringify(compact));
 }
@@ -273,6 +274,7 @@ export function decodeState(param) {
       members: c.m.slice(0, MAX_MEMBERS).map(a => ({
         name: a[0] || '', title: a[1] || '', mc: a[2] || '', scene: a[3] || RANDOM,
         color: sanitizeColor(a[4]),
+        quote: a[5] || '',
       })),
     };
   } catch {
@@ -291,32 +293,32 @@ export function shareURL(state) {
 export const SAMPLE_STATE_16 = {
   squad: { name: '超大戦隊マイクレンジャー16', title: '十六色の不滅隊列', scene: RANDOM },
   members: [
-    ['マイクレッド', '灼熱の切り込み隊長'],
-    ['マイクブルー', '蒼き深海の策士'],
-    ['マイクイエロー', '雷鳴の暴れん坊'],
-    ['マイクグリーン', '森を統べる影'],
-    ['マイクピンク', '天空の射撃手'],
-    ['マイクブラック', '闇に潜む参謀'],
-    ['マイクホワイト', '静寂の剣聖'],
-    ['マイクオレンジ', '爆裂のエンジン屋'],
-    ['マイクパープル', '幻惑の魔術師'],
-    ['マイクシアン', '氷河の狙撃手'],
-    ['マイクライム', '疾風の韋駄天'],
-    ['マイククリムゾン', '紅蓮の格闘王'],
-    ['マイクネイビー', '深淵の航海士'],
-    ['マイクゴールド', '黄金の守護者'],
-    ['マイクシルバー', '流星の早撃ち'],
-    ['マイクマグマ', '大地を焦がす拳'],
-  ].map(([name, title]) => ({ name, title, mc: '', scene: RANDOM, color: AUTO_COLOR })),
+    ['マイクレッド', '灼熱の切り込み隊長', '燃えるぜ、一番槍はもらった!'],
+    ['マイクブルー', '蒼き深海の策士', '計算通り…クールにいこう'],
+    ['マイクイエロー', '雷鳴の暴れん坊', '腹が減っては戦はできぬ!'],
+    ['マイクグリーン', '森を統べる影', '…気配を消すのは得意でね'],
+    ['マイクピンク', '天空の射撃手', '百発百中、外しません♪'],
+    ['マイクブラック', '闇に潜む参謀', '策は既に打ってある'],
+    ['マイクホワイト', '静寂の剣聖', '一閃、それで十分'],
+    ['マイクオレンジ', '爆裂のエンジン屋', 'フルスロットルだぜぇ!!'],
+    ['マイクパープル', '幻惑の魔術師', '種も仕掛けもございません'],
+    ['マイクシアン', '氷河の狙撃手', '凍りつきな'],
+    ['マイクライム', '疾風の韋駄天', '俺より速いやつ、いる?'],
+    ['マイククリムゾン', '紅蓮の格闘王', '拳で語ろうか'],
+    ['マイクネイビー', '深淵の航海士', '海図にない海こそ面白い'],
+    ['マイクゴールド', '黄金の守護者', '輝きは譲らん'],
+    ['マイクシルバー', '流星の早撃ち', '瞬きしたら終わってるぜ'],
+    ['マイクマグマ', '大地を焦がす拳', '熱いのは苦手か?'],
+  ].map(([name, title, quote]) => ({ name, title, mc: '', scene: RANDOM, color: AUTO_COLOR, quote })),
 };
 
 export const SAMPLE_STATE = {
   squad: { name: 'クラフト戦隊マイクレンジャー', title: '大地を刻む五色の旋風', scene: RANDOM },
   members: [
-    { name: 'マイクレッド',   title: '灼熱の切り込み隊長', mc: 'Notch',      scene: RANDOM },
-    { name: 'マイクブルー',   title: '蒼き深海の策士',     mc: 'jeb_',       scene: RANDOM },
-    { name: 'マイクイエロー', title: '雷鳴の暴れん坊',     mc: 'Dinnerbone', scene: RANDOM },
-    { name: 'マイクグリーン', title: '森を統べる影',       mc: 'Grumm',      scene: RANDOM },
-    { name: 'マイクピンク',   title: '天空の射撃手',       mc: 'MHF_Alex',   scene: RANDOM },
+    { name: 'マイクレッド',   title: '灼熱の切り込み隊長', mc: 'Notch',      scene: RANDOM, quote: '燃えるぜ、一番槍はもらった!' },
+    { name: 'マイクブルー',   title: '蒼き深海の策士',     mc: 'jeb_',       scene: RANDOM, quote: '計算通り…クールにいこう' },
+    { name: 'マイクイエロー', title: '雷鳴の暴れん坊',     mc: 'Dinnerbone', scene: RANDOM, quote: '腹が減っては戦はできぬ!' },
+    { name: 'マイクグリーン', title: '森を統べる影',       mc: 'Grumm',      scene: RANDOM, quote: '…気配を消すのは得意でね' },
+    { name: 'マイクピンク',   title: '天空の射撃手',       mc: 'MHF_Alex',   scene: RANDOM, quote: '百発百中、外しません♪' },
   ],
 };

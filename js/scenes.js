@@ -22,12 +22,17 @@ export function shell(duration, ctx) {
   const s = {
     duration, ctx,
     init() {}, update() {},
+    hold: null,  // {from, to, rate} この窓の間シーン時間をスロー再生(決め台詞の余韻用)
+    time: 0,
     at(time, fn) { cues.push({ time, fn, done: false }); },
     frame(t, dt) {
+      const r = (s.hold && s.time >= s.hold.from && s.time < s.hold.to) ? s.hold.rate : 1;
+      s.time += dt * r;
       for (const c of cues) {
-        if (!c.done && t >= c.time) { c.done = true; c.fn(); }
+        if (!c.done && s.time >= c.time) { c.done = true; c.fn(); }
       }
-      s.update(t, dt);
+      s.update(s.time, dt);
+      return s.time;
     },
   };
   return s;
@@ -43,6 +48,16 @@ export function addTitleCues(s, member, color, tKicker, tName, tOut) {
     titles.name(member.name, color, { sub: member.mc ? member.mc : '' });
     sfx.slam();
   });
+  // 決め台詞: 名前ドン!の直後に頭上へ吹き出し(位置はDirectorが毎フレーム追従)
+  if (member.quote) {
+    s.at(tName + 0.45, () => {
+      titles.bubble(member.quote);
+      sfx.pop(true);
+    });
+    // 台詞を読む時間: 吹き出しが出ている間をスロー再生にして実時間で約+1.7秒の余韻を作る
+    // (シーン時間L=E*r/(1-r)の窓を0.45倍速で再生すると実時間がE秒延びる)
+    s.hold = { from: tName + 0.6, to: tName + 0.6 + 1.39, rate: 0.45 };
+  }
   s.at(tOut, () => titles.clear(false));
 }
 

@@ -229,6 +229,60 @@ select option { background: #1a1a1a; }
   animation: mcPulse .4s steps(2) infinite;
 }
 
+/* ============ 決め台詞の吹き出し(コミック風・ピクセル角) ============ */
+.bubble {
+  position: absolute; z-index: 8; pointer-events: none;
+  filter: drop-shadow(4px 4px 0 rgba(0,0,5,.55));
+  animation: bubblePop .2s steps(3) both;
+  max-width: min(460px, 72vw);
+}
+/* 黒フチをピクセル階段角のクリップで表現(しっぽはこの外に置く) */
+.bubble-body {
+  background: #1a1a1a;
+  padding: 4px;
+  clip-path: polygon(
+    0 12px, 4px 12px, 4px 6px, 8px 6px, 8px 0,
+    calc(100% - 8px) 0, calc(100% - 8px) 6px, calc(100% - 4px) 6px, calc(100% - 4px) 12px, 100% 12px,
+    100% calc(100% - 12px), calc(100% - 4px) calc(100% - 12px), calc(100% - 4px) calc(100% - 6px),
+    calc(100% - 8px) calc(100% - 6px), calc(100% - 8px) 100%,
+    8px 100%, 8px calc(100% - 6px), 4px calc(100% - 6px), 4px calc(100% - 12px), 0 calc(100% - 12px)
+  );
+}
+.bubble-in {
+  background: #ffffff;
+  color: #15161a;
+  font-family: 'Minecraft', 'DotGothic16', monospace;
+  font-weight: 700;
+  font-size: clamp(17px, 3.1vmin, 27px);
+  line-height: 1.5;
+  padding: 12px 20px;
+  clip-path: polygon(
+    0 8px, 4px 8px, 4px 4px, 8px 4px, 8px 0,
+    calc(100% - 8px) 0, calc(100% - 8px) 4px, calc(100% - 4px) 4px, calc(100% - 4px) 8px, 100% 8px,
+    100% calc(100% - 8px), calc(100% - 4px) calc(100% - 8px), calc(100% - 4px) calc(100% - 4px),
+    calc(100% - 8px) calc(100% - 4px), calc(100% - 8px) 100%,
+    8px 100%, 8px calc(100% - 4px), 4px calc(100% - 4px), 4px calc(100% - 8px), 0 calc(100% - 8px)
+  );
+}
+.bubble-tail {
+  position: absolute;
+  bottom: -29px; left: 20px;
+  width: 46px; height: 36px;
+}
+.bubble.flip .bubble-tail {
+  left: auto; right: 16px;
+  transform: scaleX(-1);
+}
+.bubble.out { animation: bubbleOut .18s steps(3) both; }
+@keyframes bubblePop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes bubbleOut {
+  to { transform: scale(0); opacity: 0; }
+}
+
 /* ============ HUD ============ */
 #hud { position: absolute; inset: 0; z-index: 9; pointer-events: none; }
 #hud-progress {
