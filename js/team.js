@@ -11,15 +11,25 @@ import { dust, shell } from './scenes.js';
 
 // チーム紹介演出シーン x3 (戦隊モノ定番・背景大爆発つき)
 
+// メンバー順を中央起点で左右へ振り分けるスロット
+// (0→中央, 1→右, 2→左, 3→右…と外側へ広がる)
+function slot(i) {
+  const k = Math.ceil(i / 2);
+  return i % 2 === 1 ? k : -k;
+}
+
 // V字フォーメーション(0が先頭)
 function formation(n) {
   const out = [];
   const tight = n > 9;
+  const xf = tight ? 0.95 : 1.3;
+  // 偶数人数だと左側が1人多くなり全体が左へ寄るので、半マス分中央へ補正
+  const cx = n % 2 === 0 ? 0.5 * xf : 0;
   for (let i = 0; i < n; i++) {
-    if (i === 0) { out.push([0, 0]); continue; }
+    if (i === 0) { out.push([cx, 0]); continue; }
     const k = Math.ceil(i / 2);
     const side = i % 2 === 1 ? -1 : 1;
-    out.push([side * k * (tight ? 0.95 : 1.3), -k * (tight ? 0.62 : 0.95)]);
+    out.push([side * k * xf + cx, -k * (tight ? 0.62 : 0.95)]);
   }
   return out;
 }
@@ -157,14 +167,14 @@ function sunsetScene(ctx, state, players, colors) {
     const walk = seg(t, 0, T_STOP, E.linear);
     const z = lerp(-13, -1.2, walk);
     players.forEach((p, i) => {
-      const x = (i - (n - 1) / 2) * spacing;
+      const x = lineX(i, n, spacing);
       p.resetPose();
       if (t < T_STOP) {
         // スローモーション歩き(少しずらして揃いすぎない様に)
-        p.position.set(x, 0, z - Math.abs(i - (n - 1) / 2) * 0.3);
+        p.position.set(x, 0, z - Math.abs(slotC(i, n)) * 0.3);
         runPose(p, t + i * 0.4, { speed: 3.4, amp: 0.5, lean: 0.06 });
       } else {
-        p.position.set(x, 0, -1.2 - Math.abs(i - (n - 1) / 2) * 0.3);
+        p.position.set(x, 0, -1.2 - Math.abs(slotC(i, n)) * 0.3);
         const posed = t > T_STOP + 0.25 + i * 0.14;
         if (posed) heroPoses[i % heroPoses.length](p, t + i);
         else runPose(p, T_STOP + i * 0.4, { speed: 3.4, amp: 0.5, lean: 0.06 });
@@ -255,8 +265,8 @@ function rollcallScene(ctx, state, players, colors) {
   const s = shell(tAll + 5.4, ctx);
   const { stage, fx, screen, sfx, titles } = ctx;
   const spacing = clamp(13 / Math.max(n, 1), 1.0, 1.7);
-  const px = i => (i - (n - 1) / 2) * spacing;
-  const pz = i => -Math.abs(i - (n - 1) / 2) * 0.22;
+  const px = i => lineX(i, n, spacing);
+  const pz = i => -Math.abs(slotC(i, n)) * 0.22;
   const posed = new Array(n).fill(false);
 
   s.init = () => {
@@ -435,8 +445,8 @@ function coolwalkScene(ctx, state, players, colors) {
 
     const z = lerp(-8, 0.6, seg(t, 0, T_STOP, E.linear));
     players.forEach((p, i) => {
-      const x = (i - (n - 1) / 2) * spacing;
-      const zi = z - Math.abs(i - (n - 1) / 2) * 0.55 + (i === 0 ? 0.35 : 0);
+      const x = lineX(i, n, spacing);
+      const zi = z - Math.abs(slotC(i, n)) * 0.55 + (i === 0 ? 0.35 : 0);
       p.resetPose();
       if (t < T_STOP) {
         p.position.set(x, 0, zi);
@@ -445,7 +455,7 @@ function coolwalkScene(ctx, state, players, colors) {
         p.head.rotation.x = -0.02;
         p.head.rotation.y = 0;
       } else {
-        p.position.set(x, 0, 0.6 - Math.abs(i - (n - 1) / 2) * 0.55 + (i === 0 ? 0.35 : 0));
+        p.position.set(x, 0, 0.6 - Math.abs(slotC(i, n)) * 0.55 + (i === 0 ? 0.35 : 0));
         const posed = t > T_STOP + 0.2 + i * 0.12;
         if (posed) heroPoses[i % heroPoses.length](p, t + i);
         else runPose(p, T_STOP * 0.62 + i * 0.5, { speed: 5.2, amp: 0.5, lean: 0.05 });
@@ -467,7 +477,9 @@ function coolwalkScene(ctx, state, players, colors) {
 
 const ENDER = ['#c05fff', '#8a2be2', '#ff7af0', '#e0b0ff'];
 
-function lineX(i, n, spacing) { return (i - (n - 1) / 2) * spacing; }
+// 偶数人数だとスロットが右に半マス寄るので、全体を中央寄せに補正したスロット値
+function slotC(i, n) { return slot(i) + (n % 2 === 0 ? -0.5 : 0); }
+function lineX(i, n, spacing) { return slotC(i, n) * spacing; }
 
 function teamTitleCues2(s, state, colors, tKicker, tName) {
   const { titles, sfx } = s.ctx;
@@ -499,7 +511,7 @@ function mobparadeScene(ctx, state, players, colors) {
     players.forEach((p, i) => {
       p.visible = true;
       p.rotation.y = 0;
-      p.position.set(lineX(i, n, spacing), 0, 0.6 - Math.abs(i - (n - 1) / 2) * 0.3);
+      p.position.set(lineX(i, n, spacing), 0, 0.6 - Math.abs(slotC(i, n)) * 0.3);
     });
     // 後方にモブ軍団(2列)
     const makers = [makeCreeper, makePig, makeSheep, makeChicken, makeWolf, () => new PlayerModel(makeZombieSkin())];
@@ -682,7 +694,7 @@ function pileupScene(ctx, state, players, colors) {
         // 一斉にバク転気味に跳ね起きてフォーメーションへ
         const k = seg(t, T_UP, T_UP + 0.35, E.outQuad);
         const tx = lineX(i, n, clamp(12 / n, 0.95, 1.6));
-        const tz = -Math.abs(i - (n - 1) / 2) * 0.4;
+        const tz = -Math.abs(slotC(i, n)) * 0.4;
         p.rotation.x = Math.PI / 2 * (1 - k);
         p.rotation.z = Math.sin(i * 1.9) * 0.4 * (1 - k);
         p.position.set(
@@ -693,7 +705,7 @@ function pileupScene(ctx, state, players, colors) {
         tuckPose(p, Math.sin(k * Math.PI) * 0.8);
       } else {
         const tx = lineX(i, n, clamp(12 / n, 0.95, 1.6));
-        const tz = -Math.abs(i - (n - 1) / 2) * 0.4;
+        const tz = -Math.abs(slotC(i, n)) * 0.4;
         p.position.set(tx, 0, tz);
         p.rotation.set(0, 0, 0);
         heroPoses[i % heroPoses.length](p, t + i);
@@ -758,7 +770,7 @@ function teamportalScene(ctx, state, players, colors) {
       if (!p.visible) return;
       const t0 = starts[i];
       const tx = lineX(i, n, spacing);
-      const tz = 0.6 - Math.abs(i - (n - 1) / 2) * 0.35;
+      const tz = 0.6 - Math.abs(slotC(i, n)) * 0.35;
       const walk = seg(t, t0, t0 + 1.3, E.inOutQuad);
       p.resetPose();
       if (walk < 1) {
@@ -789,7 +801,7 @@ function fireworksScene(ctx, state, players, colors) {
     players.forEach((p, i) => {
       p.visible = true;
       p.rotation.y = 0;
-      p.position.set(lineX(i, n, spacing), 0, -Math.abs(i - (n - 1) / 2) * 0.35);
+      p.position.set(lineX(i, n, spacing), 0, -Math.abs(slotC(i, n)) * 0.35);
     });
     // 花火: 打ち上げ(riser+光の筋) → 開花(色burst)。カメラの画角に収まる位置で
     const shots = Math.min(9, 4 + n);
@@ -864,7 +876,7 @@ function biggolemScene(ctx, state, players, colors) {
     players.forEach((p, i) => {
       p.visible = true;
       p.rotation.y = 0;
-      p.position.set(lineX(i, n, spacing), 0, 0.8 - Math.abs(i - (n - 1) / 2) * 0.35);
+      p.position.set(lineX(i, n, spacing), 0, 0.8 - Math.abs(slotC(i, n)) * 0.35);
     });
     s.at(0.5, () => { sfx.thud(0.9); stage.shake(0.15); });
     s.at(1.5, () => { sfx.thud(0.9); stage.shake(0.15); });
@@ -1130,9 +1142,9 @@ function elytrasquadScene(ctx, state, players, colors) {
         // 遠景をV字編隊で横切る
         const k2 = t / T_PASS;
         p.position.set(
-          lerp(-22, 14, k2) - Math.abs(i - (n - 1) / 2) * 1.4,
-          7.5 - Math.abs(i - (n - 1) / 2) * 0.4,
-          -11 - Math.abs(i - (n - 1) / 2) * 1.2
+          lerp(-22, 14, k2) - Math.abs(slotC(i, n)) * 1.4,
+          7.5 - Math.abs(slotC(i, n)) * 0.4,
+          -11 - Math.abs(slotC(i, n)) * 1.2
         );
         p.rotation.set(Math.PI / 2 - 0.2, 0, -Math.PI / 2 + 0.15);
         glidePose(p);
@@ -1193,7 +1205,7 @@ function witherScene(ctx, state, players, colors) {
     players.forEach((p, i) => {
       p.visible = true;
       p.rotation.y = 0;
-      p.position.set(lineX(i, n, spacing), 0, 0.8 - Math.abs(i - (n - 1) / 2) * 0.35);
+      p.position.set(lineX(i, n, spacing), 0, 0.8 - Math.abs(slotC(i, n)) * 0.35);
     });
     // 黒いスカル弾(3連)
     for (let i = 0; i < 3; i++) {
@@ -1292,7 +1304,7 @@ function witherScene(ctx, state, players, colors) {
     players.forEach((p, i) => {
       p.resetPose();
       const x = lineX(i, n, spacing);
-      const z = 0.8 - Math.abs(i - (n - 1) / 2) * 0.35;
+      const z = 0.8 - Math.abs(slotC(i, n)) * 0.35;
       p.position.set(x, 0, z);
       if (t < T_BEAM) {
         // スカル弾の爆風に耐える
