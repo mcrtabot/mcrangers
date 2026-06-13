@@ -329,7 +329,10 @@ function miningScene(ctx, member, player, color) {
     stage.props.add(wall);
 
     pick = makePickaxe();
-    pick.rotation.y = Math.PI / 2;
+    // 柄を前腕と直交させて拳で握り、刃の尖った先端が振り下ろす方向(壁側)を向くように。
+    // グリップは柄の下端寄り(てこを効かせる持ち方)= ヘッドが拳から遠くなるよう柄軸方向へオフセット
+    pick.rotation.set(Math.PI / 2, Math.PI / 2, 0);
+    pick.position.set(0, -0.13, 0.4);
     player.handR.add(pick);
 
     player.position.set(0, 0, -0.4);
@@ -2035,7 +2038,7 @@ function sleepScene(ctx, member, player, color) {
     stage.props.add(makeClouds());
     const bed = makeBed();
     bed.position.set(-1.4, 0, -0.6);
-    bed.rotation.y = 0.3;
+    bed.rotation.y = Math.PI + 0.3; // 枕が頭側に来るよう180°回す
     stage.props.add(bed);
     s.bed = bed;
     player.rotation.order = 'YXZ';

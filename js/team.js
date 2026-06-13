@@ -1337,7 +1337,7 @@ function morningScene(ctx, state, players, colors) {
       p.rotation.order = 'YXZ';
       const bed = makeBed();
       bed.position.set(lineX(i, n, spacing), 0, -0.8);
-      bed.rotation.y = 0;
+      bed.rotation.y = Math.PI; // 枕が頭側に来るよう180°回す
       stage.props.add(bed);
     });
     chicken = makeChicken();
