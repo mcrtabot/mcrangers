@@ -99,6 +99,8 @@ export class FormUI {
       <div class="mc-head">
         <img class="avatar" alt="" loading="lazy">
         <span class="mc-idx">MEMBER ${String(i + 1).padStart(2, '0')} — ${color.label}</span>
+        <button class="mc-move mc-up" title="上へ" ${i === 0 ? 'disabled' : ''}>&#x25B2;</button>
+        <button class="mc-move mc-down" title="下へ" ${i === this.state.members.length - 1 ? 'disabled' : ''}>&#x25BC;</button>
         <button class="mc-remove" title="削除">&#x2715;</button>
       </div>
       <div class="field-row"><label>メンバー名</label><input type="text" data-k="name" maxlength="20" placeholder="例: マイクレッド"></div>
@@ -190,6 +192,19 @@ export class FormUI {
       this.renderMembers();
       this._saveDraft();
     });
+
+    // 並び替え(隣のメンバーと入れ替え)。値はinputイベントで即state反映済みなので
+    // 配列を入れ替えてrenderMembersすれば内容も色(おまかせ=並び順)も正しく更新される
+    const move = (delta) => {
+      const j = i + delta;
+      const ms = this.state.members;
+      if (j < 0 || j >= ms.length) return;
+      [ms[i], ms[j]] = [ms[j], ms[i]];
+      this.renderMembers();
+      this._saveDraft();
+    };
+    card.querySelector('.mc-up').addEventListener('click', () => move(-1));
+    card.querySelector('.mc-down').addEventListener('click', () => move(1));
 
     return card;
   }

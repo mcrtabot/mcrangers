@@ -392,13 +392,22 @@ select option { background: #1a1a1a; }
   text-shadow: 1px 1px 0 #000;
 }
 .member-card .mc-remove {
-  margin-left: auto;
   background: none; border: none; color: #a8a8a8; font-size: 15px; cursor: pointer;
   padding: 2px 6px;
   font-family: 'Minecraft', 'DotGothic16', monospace;
   text-shadow: 1px 1px 0 #000;
 }
 .member-card .mc-remove:hover { color: #ff6b60; }
+/* 並び替えボタン(↑↓)。最初の1つでボタン群を右端へ寄せる */
+.member-card .mc-move {
+  background: none; border: none; color: #a8a8a8; font-size: 12px; cursor: pointer;
+  padding: 4px 8px;
+  font-family: 'Minecraft', 'DotGothic16', monospace;
+  text-shadow: 1px 1px 0 #000;
+}
+.member-card .mc-move.mc-up { margin-left: auto; }
+.member-card .mc-move:hover:not(:disabled) { color: #fff; }
+.member-card .mc-move:disabled { opacity: .25; cursor: default; }
 .member-card .field-row label { flex-basis: 136px; font-size: 12px; }
 .member-card .avatar {
   width: 28px; height: 28px;
