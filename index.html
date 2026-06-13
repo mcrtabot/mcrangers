@@ -81,6 +81,7 @@
 
       <div class="form-footer">
         <button id="btn-play" class="btn primary">&#9654; 出撃！</button>
+        <button id="btn-record" class="btn sub">&#127916; 動画を保存（mp4）</button>
       </div>
       <p class="hint">スキンは Minecraft Java版 の Username から自動取得します（UUID直接入力も可）。<br>取得できない場合は戦隊スーツのスキンで登場します。</p>
     </div>
@@ -90,6 +91,48 @@
   <div id="overlay-screen" class="hidden">
     <div id="overlay-inner"></div>
   </div>
+
+  <!-- 動画保存ダイアログ(編集画面・終了画面の両方から開く) -->
+  <dialog id="record-dialog" class="mc-dialog">
+    <form method="dialog" class="rec-form">
+      <h2>&#127916; 動画を保存</h2>
+      <div class="rec-field">
+        <label for="rec-res">解像度</label>
+        <select id="rec-res">
+          <option value="720">720p</option>
+          <option value="1080" selected>1080p（推奨）</option>
+          <option value="1440">1440p</option>
+          <option value="2160">2160p（4K）</option>
+        </select>
+      </div>
+      <div class="rec-field">
+        <label for="rec-fps">フレームレート</label>
+        <select id="rec-fps">
+          <option value="30" selected>30 fps</option>
+          <option value="60">60 fps</option>
+        </select>
+      </div>
+      <div class="rec-field">
+        <label for="rec-aspect">縦横比</label>
+        <select id="rec-aspect">
+          <option value="screen" selected>画面のまま</option>
+          <option value="16:9">16:9（横）</option>
+          <option value="9:16">9:16（縦）</option>
+          <option value="1:1">1:1（正方）</option>
+          <option value="4:3">4:3</option>
+        </select>
+      </div>
+      <p class="rec-note">
+        ※ 保存される動画は、名前・二つ名・決め台詞の吹き出しなどの<strong>文字表現が、プレビュー画面とは一部異なって見える</strong>ことがあります。<br>
+        ※ 画面と違う縦横比を選ぶと、横長の演出が左右で少し見切れる場合があります。<br>
+        ※ 対応はPC版の Chrome / Edge。ウィンドウを大きくするほど高画質になります。
+      </p>
+      <div class="rec-actions">
+        <button value="cancel" class="btn sub ghost">キャンセル</button>
+        <button value="ok" class="btn sub" id="rec-go">この設定で保存</button>
+      </div>
+    </form>
+  </dialog>
 </div>
 <script type="module" src="js/app.js"></script>
 </body>

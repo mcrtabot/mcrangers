@@ -7,6 +7,8 @@ import { FX, ScreenFX, Stage, Titles, sfx } from './engine.js';
 import { createIntroScene } from './scenes.js';
 import { loadSkin, makeSuitedSkin } from './skin.js';
 import { createTeamScene } from './team.js';
+import { CanvasTitles } from './canvas_titles.js';
+import { FrameRecorder, compositeFrame, downloadBlob, recorderSupported, renderAudio } from './recorder.js';
 
 // ============================================================
 // [ui.js より統合]
@@ -417,6 +419,22 @@ let director = null;
 let players = [];
 let currentState = null;   // normalize済み(random未解決)
 let idleT = 0;
+let recording = false;     // 動画録画中はメインループを止める
+
+// 録画用の記録SFX: 実際には鳴らさず、呼ばれた音メソッドと論理時刻(_time)を
+// events に記録する。録画後に renderAudio が OfflineAudioContext で再現する。
+function makeRecSFX() {
+  const events = [];
+  const target = { enabled: true, _time: 0, events, unlock() {}, setEnabled() {} };
+  Object.defineProperty(target, 't', { get() { return target._time; } });
+  return new Proxy(target, {
+    get(t, prop) {
+      if (prop in t) return t[prop];
+      if (prop === 'then' || prop === 'catch' || prop === 'finally' || typeof prop !== 'string') return undefined;
+      return (...args) => { events.push({ m: prop, args, t: t._time }); };
+    },
+  });
+}
 
 const form = new FormUI((rawState) => {
   sfx.unlock();
@@ -432,6 +450,7 @@ const DEBUG = new URLSearchParams(location.search).has('debug');
 const clock = new THREE.Clock();
 function loop() {
   requestAnimationFrame(loop);
+  if (recording) { clock.getDelta(); return; } // 録画中はコマ送りループが描画を担当
   const dt = Math.min(clock.getDelta(), 0.05);
 
   if (DEBUG) {
@@ -477,6 +496,15 @@ async function startShow(state) {
 
   // スキンロード
   showLoading(state);
+  players.forEach(p => { if (p.parent) p.parent.remove(p); p.dispose(); });
+  players = await loadPlayerModels(state, (done, total) => updateLoading(done, total));
+
+  hideOverlay();
+  beginDirector();
+}
+
+// state からスキンを取得して PlayerModel[] を構築(startShow/録画で共用)
+async function loadPlayerModels(state, onProgress) {
   const results = [];
   let done = 0;
   await Promise.all(state.members.map(async (m, i) => {
@@ -487,15 +515,9 @@ async function startShow(state) {
       results[i] = makeSuitedSkin(results[i], color);
     }
     done++;
-    updateLoading(done, state.members.length);
+    if (onProgress) onProgress(done, state.members.length);
   }));
-
-  // プレイヤーモデル構築
-  players.forEach(p => { if (p.parent) p.parent.remove(p); p.dispose(); });
-  players = results.map(r => new PlayerModel(r));
-
-  hideOverlay();
-  beginDirector();
+  return results.map(r => new PlayerModel(r));
 }
 
 function beginDirector() {
@@ -514,6 +536,183 @@ function beginDirector() {
   document.body.classList.add('cinema');
   hud.classList.remove('hidden');
   director.start();
+}
+
+// ============================================================
+// 動画録画(コマ送り → WebCodecs → mp4 ダウンロード)
+// ============================================================
+async function recordShow(stateArg) {
+  if (recording) return;
+  const state = stateArg || currentState;
+  if (!state || !state.members.length) {
+    alert('先にメンバーを入力してください。');
+    return;
+  }
+  currentState = state;
+  if (!recorderSupported()) {
+    alert('この環境では動画書き出し(WebCodecs)に対応していません。PC版のChrome/Edgeをお使いください。');
+    return;
+  }
+
+  // 進行中のライブ演出があれば停止
+  if (director) { director.stop(); director = null; }
+  document.body.classList.remove('cinema');
+  hud.classList.add('hidden');
+
+  recording = true;
+  showRecOverlay('準備中… スキンを取得しています');
+
+  // canvasで使うフォントを確実にロード
+  try {
+    await Promise.all([
+      document.fonts.load("400 120px 'Reggae One'"),
+      document.fonts.load("700 40px 'DotGothic16'"),
+    ]);
+    await document.fonts.ready;
+  } catch {}
+
+  const prevPixelRatio = stage.renderer.getPixelRatio();
+  let recPlayers = [];
+  let blob = null;
+
+  try {
+    recPlayers = await loadPlayerModels(currentState, (d, t) => showRecOverlay(`スキン取得中… ${d} / ${t}`));
+
+    // 録画設定(解像度・fps・アスペクト比)をUIから取得
+    const { targetH, fps, aspect } = getRecordSettings();
+
+    // 出力解像度: 縦=targetH、横はアスペクト比から算出('screen'なら画面比)
+    const ar = aspect === 'screen' ? innerWidth / innerHeight : aspect;
+    const outH = Math.round(targetH / 2) * 2;
+    const outW = Math.round((outH * ar) / 2) * 2;
+
+    // レンダラ/カメラ/2Dを出力解像度・アスペクトへ(CSSは触らず描画バッファのみ)
+    stage.renderer.setPixelRatio(1);
+    stage.renderer.setSize(outW, outH, false);
+    stage.camera.aspect = outW / outH;
+    stage.camera.updateProjectionMatrix();
+    screen.cv.width = outW;
+    screen.cv.height = outH;
+
+    const canvasTitles = new CanvasTitles(outW, outH);
+    const recSfx = makeRecSFX();
+    const recCtx = { stage, fx, screen, titles: canvasTitles, sfx: recSfx };
+    const resolved = resolveScenes(currentState);
+
+    let finished = false;
+    const recDirector = new Director(recCtx, resolved, recPlayers, {
+      onFinish: () => { finished = true; },
+      onProgress: () => {},
+    });
+
+    document.body.classList.add('cinema');
+    const rec = new FrameRecorder({ width: outW, height: outH, fps });
+    await rec.init();
+
+    const comp = document.createElement('canvas');
+    comp.width = outW;
+    comp.height = outH;
+    const g = comp.getContext('2d');
+
+    recDirector.start();
+    canvasTitles.now = 0;
+    const dt = 1 / fps;
+    const maxFrames = fps * 300; // 安全上限5分
+
+    while (!finished && rec.frameIndex < maxFrames) {
+      canvasTitles.now += dt;
+      recSfx._time = canvasTitles.now;
+      recDirector.update(dt);
+      // 演出が終わると update内で全員退場(cleanup)するので、その空フレームは録画しない。
+      // 直前ループで記録済みの「全員が揃った余韻フレーム」が最終フレームになる。
+      if (finished) break;
+      fx.update(dt);
+      screen.update(dt);
+      stage.update(dt);
+      compositeFrame(g, {
+        W: outW, H: outH,
+        stageCanvas: stage.renderer.domElement,
+        fxCanvas: screen.cv,
+        canvasTitles,
+        cinema: true,
+      });
+      await rec.addFrame(comp);
+      if (rec.frameIndex % 6 === 0) {
+        showRecOverlay(`録画中… ${rec.seconds.toFixed(1)}秒 (${rec.frameIndex}コマ) / ${outW}×${outH}`);
+      }
+    }
+
+    // 音声(記録したSFXイベントをOfflineで合成 → mp4へ多重化)
+    if (rec.hasAudio) {
+      showRecOverlay('音声を合成しています…');
+      try {
+        const audioBuf = await renderAudio(recSfx.events, rec.frameIndex / fps, rec.sampleRate);
+        if (audioBuf) await rec.addAudio(audioBuf);
+      } catch (e) { console.warn('音声合成に失敗(無音で続行)', e); }
+    }
+
+    recDirector.stop();
+    showRecOverlay('エンコードを完了しています…');
+    blob = await rec.finish();
+  } catch (e) {
+    console.error('録画エラー', e);
+    showRecOverlay('録画に失敗しました: ' + ((e && e.message) || e), true);
+  } finally {
+    // 状態を復元
+    stage.renderer.setPixelRatio(prevPixelRatio);
+    stage.resize();
+    screen.resize();
+    recPlayers.forEach(p => { if (p.parent) p.parent.remove(p); p.dispose(); });
+    recording = false;
+    document.body.classList.remove('cinema');
+  }
+
+  if (blob) {
+    const name = (currentState.squad.name || 'mcrangers').replace(/[\\/:*?"<>|\s]+/g, '_');
+    downloadBlob(blob, `${name}.mp4`);
+    showRecDone(blob);
+  }
+}
+
+function showRecOverlay(msg, isError = false) {
+  overlayInner.innerHTML = `
+    <div class="ov-rec ${isError ? 'err' : ''}">${esc(msg)}</div>
+    ${isError ? '' : '<div class="ov-bar indet"><i></i></div>'}
+    <div class="ov-rec-note">録画中はタブを閉じたり最小化しないでください</div>
+  `;
+  overlay.classList.remove('hidden');
+}
+
+function showRecDone(blob) {
+  const mb = (blob.size / 1048576).toFixed(1);
+  overlayInner.innerHTML = `
+    <div class="ov-complete">★ 動画を保存しました ★</div>
+    <div class="ov-rec-note">ダウンロードフォルダの .mp4 を確認してください(${mb} MB)</div>
+    <div class="ov-buttons">
+      <button class="btn sub ghost" id="ov-rec-close">閉じる</button>
+    </div>
+  `;
+  overlay.classList.remove('hidden');
+  document.getElementById('ov-rec-close').addEventListener('click', () => {
+    hideOverlay();
+    form.show();
+  });
+}
+
+// 録画設定(解像度・fps・アスペクト比)をUIから取得
+function getRecordSettings() {
+  const resEl = document.getElementById('rec-res');
+  const fpsEl = document.getElementById('rec-fps');
+  const aspEl = document.getElementById('rec-aspect');
+  const targetH = parseInt((resEl && resEl.value) || '1080', 10) || 1080;
+  const fps = parseInt((fpsEl && fpsEl.value) || '30', 10) || 30;
+  let aspect = 'screen';
+  const av = (aspEl && aspEl.value) || 'screen';
+  if (av !== 'screen') {
+    const [w, h] = av.split(':').map(Number);
+    if (w > 0 && h > 0) aspect = w / h;
+  }
+  return { targetH, fps, aspect };
 }
 
 function exitToForm() {
@@ -574,6 +773,7 @@ function showEndCard() {
     <div class="ov-squad-name">${esc(currentState.squad.name)}</div>
     <div class="ov-buttons">
       <button class="btn sub" id="ov-replay">&#9654; もう一度</button>
+      <button class="btn sub" id="ov-record">&#127916; 動画を保存</button>
       <button class="btn sub" id="ov-copy">&#128279; URLをコピー</button>
       <button class="btn sub ghost" id="ov-edit2">編集に戻る</button>
     </div>
@@ -584,6 +784,7 @@ function showEndCard() {
     hideOverlay();
     beginDirector();
   });
+  document.getElementById('ov-record').addEventListener('click', () => openRecordDialog(currentState));
   document.getElementById('ov-copy').addEventListener('click', async () => {
     const url = shareURL(currentState);
     try {
@@ -603,6 +804,36 @@ function hideOverlay() {
 
 // ---- 操作 ----
 document.getElementById('btn-exit').addEventListener('click', exitToForm);
+
+// 動画保存ダイアログ(編集画面・終了画面の両方から開く)
+const recordDialog = document.getElementById('record-dialog');
+let pendingRecordState = null;
+function openRecordDialog(state) {
+  if (recording) return;
+  if (!state || !state.members.length) { alert('先にメンバーを入力してください。'); return; }
+  if (!recorderSupported()) {
+    alert('この環境では動画書き出し(WebCodecs)に対応していません。PC版のChrome/Edgeをお使いください。');
+    return;
+  }
+  pendingRecordState = state;
+  if (recordDialog && typeof recordDialog.showModal === 'function') recordDialog.showModal();
+  else recordShow(state); // <dialog>非対応環境はそのまま録画
+}
+if (recordDialog) {
+  recordDialog.addEventListener('close', () => {
+    if (recordDialog.returnValue === 'ok' && pendingRecordState) {
+      const s = pendingRecordState;
+      pendingRecordState = null;
+      recordShow(s);
+    }
+  });
+}
+
+const recordBtn = document.getElementById('btn-record');
+if (recordBtn) {
+  if (!recorderSupported()) recordBtn.title = 'この環境は動画書き出しに非対応です（PC版Chrome/Edge推奨）';
+  recordBtn.addEventListener('click', () => openRecordDialog(normalizeState(form.state)));
+}
 
 const MUTE_KEY = 'mcrangers-muted';
 const muteBtn = document.getElementById('btn-mute');

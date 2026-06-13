@@ -566,3 +566,57 @@ select option { background: #1a1a1a; }
   #form-panel { padding: 22px 14px; margin: 2vh auto; width: 96vw; }
   .form-section h2 { letter-spacing: .1em; }
 }
+
+/* ============ 録画オーバーレイ ============ */
+.ov-rec {
+  font-family: 'Reggae One', serif;
+  font-size: clamp(20px, 4vmin, 34px);
+  color: #aef7a0;
+  text-shadow: 2px 2px 0 #000;
+  letter-spacing: .04em;
+  text-align: center;
+}
+.ov-rec.err { color: #ff7b6b; }
+.ov-rec-note {
+  font-family: 'DotGothic16', monospace;
+  font-size: clamp(12px, 2vmin, 16px);
+  color: #cfd6e6;
+  margin-top: 1.2vh;
+  text-align: center;
+}
+/* 動画保存ダイアログ */
+.mc-dialog {
+  border: 3px solid #000;
+  background: #1b1f2e;
+  color: #fff;
+  padding: 0;
+  width: 440px; max-width: 92vw;
+  box-shadow: 0 12px 40px rgba(0,0,0,.6);
+}
+.mc-dialog::backdrop { background: rgba(0,0,5,.62); }
+.rec-form { padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; }
+.rec-form h2 {
+  font-family: 'Reggae One', serif; font-size: 22px; color: #aef7a0;
+  text-shadow: 2px 2px 0 #000; margin: 0 0 4px; text-align: center;
+}
+.rec-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rec-field label { font-family: 'DotGothic16', monospace; font-size: 14px; color: #cfd6e6; }
+.rec-field select { flex: 0 0 58%; font-size: 14px; }
+.rec-note {
+  font-family: 'DotGothic16', monospace; font-size: 11.5px; line-height: 1.7;
+  color: #ffd76a; background: rgba(0,0,0,.3); padding: 10px 12px;
+  border-left: 3px solid #ffd76a;
+}
+.rec-note strong { color: #fff; }
+.rec-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 4px; }
+
+.ov-bar.indet { overflow: hidden; }
+.ov-bar.indet i {
+  display: block; width: 40%; height: 100%;
+  background: linear-gradient(90deg, transparent, #62b53e, transparent);
+  animation: indetBar 1.1s linear infinite;
+}
+@keyframes indetBar {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}

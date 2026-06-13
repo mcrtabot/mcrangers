@@ -984,7 +984,7 @@ export class ScreenFX {
 // - 各音は「サブベース + ボディ + トランジェント + 空気感」の多レイヤー
 // - 爆発系はWaveShaperで歪ませ、金属音は非整数倍音で鳴らす
 
-class SFX {
+export class SFX {
   constructor() {
     this.ctx = null;
     this.master = null;
@@ -992,6 +992,29 @@ class SFX {
     this.enabled = true;
     this._noiseBuf = null;
     this._distCurve = null;
+    this._recTime = null;  // 録画時はこの論理時刻でスケジュールする
+  }
+
+  // master → compressor → destination とリバーブセンドを構築(this.ctx前提)
+  _buildGraph() {
+    this.master = this.ctx.createGain();
+    this.master.gain.value = this.enabled ? 0.5 : 0;
+    const comp = this.ctx.createDynamicsCompressor();
+    comp.threshold.value = -16;
+    comp.knee.value = 18;
+    comp.ratio.value = 5;
+    comp.attack.value = 0.003;
+    comp.release.value = 0.22;
+    this.master.connect(comp);
+    comp.connect(this.ctx.destination);
+
+    // リバーブ(2秒の減衰ノイズIR)
+    this.convolver = this.ctx.createConvolver();
+    this.convolver.buffer = this._impulse(2.0, 2.4);
+    const ret = this.ctx.createGain();
+    ret.gain.value = 0.85;
+    this.convolver.connect(ret);
+    ret.connect(this.master);
   }
 
   unlock() {
@@ -999,28 +1022,18 @@ class SFX {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       this.ctx = new AC();
-
-      // master → compressor → destination
-      this.master = this.ctx.createGain();
-      this.master.gain.value = this.enabled ? 0.5 : 0;
-      const comp = this.ctx.createDynamicsCompressor();
-      comp.threshold.value = -16;
-      comp.knee.value = 18;
-      comp.ratio.value = 5;
-      comp.attack.value = 0.003;
-      comp.release.value = 0.22;
-      this.master.connect(comp);
-      comp.connect(this.ctx.destination);
-
-      // リバーブ(2秒の減衰ノイズIR)
-      this.convolver = this.ctx.createConvolver();
-      this.convolver.buffer = this._impulse(2.0, 2.4);
-      const ret = this.ctx.createGain();
-      ret.gain.value = 0.85;
-      this.convolver.connect(ret);
-      ret.connect(this.master);
+      this._buildGraph();
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
+  }
+
+  // 録画用: Offline(等の)AudioContext上にグラフを構築する。
+  // 以後 _recTime に論理時刻をセットしてから各音メソッドを呼ぶと、その時刻で
+  // offlineにスケジュールされる(コマ送り映像と完全同期)。
+  useContext(ctx) {
+    this.ctx = ctx;
+    this.enabled = true;
+    this._buildGraph();
   }
 
   setEnabled(on) {
@@ -1028,7 +1041,7 @@ class SFX {
     if (this.master) this.master.gain.value = on ? 0.5 : 0;
   }
 
-  get t() { return this.ctx.currentTime; }
+  get t() { return this._recTime != null ? this._recTime : this.ctx.currentTime; }
   _ok() { return this.ctx && this.enabled; }
 
   // ---- 基盤ヘルパー ----
@@ -1359,7 +1372,7 @@ class SFX {
     f.frequency.exponentialRampToValueAtTime(150, this.t + 0.25);
     const g = this._env(ch, 0.55, 0.002, 0.3);
     src.connect(f); f.connect(g);
-    src.start(); src.stop(this.t + 0.4);
+    src.start(this.t); src.stop(this.t + 0.4);
     this._noiseHit(ch, { type: 'highpass', f0: 2500, dur: 0.04, peak: 0.2, attack: 0.001 });
   }
 
