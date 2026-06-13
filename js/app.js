@@ -604,12 +604,25 @@ function hideOverlay() {
 // ---- 操作 ----
 document.getElementById('btn-exit').addEventListener('click', exitToForm);
 
+const MUTE_KEY = 'mcrangers-muted';
 const muteBtn = document.getElementById('btn-mute');
+
+function applyMuteUI() {
+  muteBtn.classList.toggle('off', !sfx.enabled);
+  muteBtn.innerHTML = sfx.enabled ? '&#x1F50A;' : '&#x1F507;';
+}
+
+// 起動時に前回のサウンド設定を復元(リロードしても保持)
+try {
+  if (localStorage.getItem(MUTE_KEY) === '1') sfx.setEnabled(false);
+} catch {}
+applyMuteUI();
+
 muteBtn.addEventListener('click', () => {
   sfx.unlock();
   sfx.setEnabled(!sfx.enabled);
-  muteBtn.classList.toggle('off', !sfx.enabled);
-  muteBtn.innerHTML = sfx.enabled ? '&#x1F50A;' : '&#x1F507;';
+  applyMuteUI();
+  try { localStorage.setItem(MUTE_KEY, sfx.enabled ? '0' : '1'); } catch {}
 });
 
 // クリック/Spaceで次のシーンへ

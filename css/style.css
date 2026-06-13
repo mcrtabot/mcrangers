@@ -290,7 +290,10 @@ select option { background: #1a1a1a; }
   font-size: 15px; letter-spacing: .25em; color: #fff;
   text-shadow: 2px 2px 0 rgba(0,0,0,.8);
 }
-#hud-buttons { position: absolute; top: 12px; right: 14px; display: flex; gap: 8px; pointer-events: auto; }
+/* 閉じるボタンは常時表示のサウンドボタンの左隣に置く(重なり防止) */
+#hud-buttons { position: absolute; top: 12px; right: 64px; display: flex; gap: 8px; pointer-events: auto; }
+/* サウンドON/OFFは画面右上に常時表示(フォーム・ローディング・演出中いずれでも操作可) */
+#sound-toggle { position: fixed; top: 12px; right: 14px; z-index: 40; pointer-events: auto; }
 .hud-btn {
   width: 42px; height: 42px;
   font-size: 17px; cursor: pointer;
