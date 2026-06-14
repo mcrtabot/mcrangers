@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- スキン未取得時の「赤レンジャー」ヘルメット顔(アプリのフォールバックスーツと同配色) -->
+  <rect width="16" height="16" fill="#ff3b30"/>
+  <rect width="16" height="2" fill="#ff6c63"/>
+  <rect y="14" width="16" height="2" fill="#721a15"/>
+  <rect x="0" y="2" width="2" height="12" fill="#a5261f"/>
+  <rect x="14" y="2" width="2" height="12" fill="#a5261f"/>
+  <rect x="2" y="5" width="12" height="5" fill="#14161f"/>
+  <rect x="3" y="6" width="8" height="1" fill="#3b4a6b"/>
+  <rect x="6" y="12" width="4" height="1" fill="#c8ccda"/>
+</svg>
